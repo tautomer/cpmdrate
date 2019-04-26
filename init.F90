@@ -1,3 +1,29 @@
+module stp
+    implicit none
+
+    contains 
+    subroutine stopgm(msgp1, msgp2)
+        implicit none
+    
+        character(len=*), intent(in) :: msgp1
+        character(len=*), optional, intent(in) :: msgp2
+        character(len=50) :: msg
+    
+        if(present(msgp2)) then
+            write(msg, '(3a)') msgp1, msgp2, '.'
+        else
+            write(msg, '(2a)') msgp1, '.'
+        end if
+        ! for some unknown reasons, ifort does not stop + arg
+#if defined(__INTEL_COMPILER)
+        write(*, '(a)') msg
+        stop
+#else
+        stop msg
+#endif
+    end subroutine
+end module
+
 module init
     implicit none
 
@@ -26,11 +52,12 @@ module init
     subroutine read_buffer(label, buffer, line)
         use pmf
         use kappa
+        use stp
         implicit none
     
         integer :: ioerr
         integer, intent(in) :: line
-        real*8 :: kb = 3.16679d-6
+        real(kind=16) :: kb = 3.16679d-6
         character(len=*), intent(in) :: buffer, label
 
         select case (label)
@@ -43,6 +70,13 @@ module init
             else if (ioerr < 0) then
                 call stopgm("PMF filename not sepcified")
             end if
+        case ("gr")
+            read(buffer, *, iostat=ioerr) gr
+            if (ioerr > 0) then
+                call stopgm("Mass should be a real number in atomic units.")
+            else if (ioerr < 0) then
+                call stopgm("Mass not sepcified.")
+            end if
         case ("temperature")
             read(buffer, *, iostat=ioerr) temp
             if (ioerr > 0) then
@@ -50,7 +84,7 @@ module init
             else if (ioerr < 0) then
                 call stopgm("Temperature not sepcified")
             end if
-            beta = temp * kb
+            beta = 1 / (temp * kb)
         case ("side")
             read(buffer, *, iostat=ioerr) int0
             if (ioerr > 0) then
@@ -69,26 +103,5 @@ module init
             write(*, "(a, i0)") "Skipping invalid label at line ", line
         end select
     
-    end subroutine
-    
-    subroutine stopgm(msgp1, msgp2)
-        implicit none
-    
-        character(len=*), intent(in) :: msgp1
-        character(len=*), optional, intent(in) :: msgp2
-        character(len=50) :: msg
-    
-        if(present(msgp2)) then
-            write(msg, '(3a)') msgp1, msgp2, '.'
-        else
-            write(msg, '(2a)') msgp1, '.'
-        end if
-        ! for some unknown reasons, ifort does not stop + arg
-#if defined(__INTEL_COMPILER)
-        write(*, '(a)') msg
-        stop
-#else
-        stop msg
-#endif
     end subroutine
 end module

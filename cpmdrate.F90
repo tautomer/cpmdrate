@@ -7,6 +7,6 @@ program test
     call readconf()
     call read_free_ener()
     call tst_rate()
-    write(*, '(a,f5.1,a,f11.7)') 'Full rate constant at', temp, 'K is ', &
+    write(*, '(a,f6.1,a,e13.6)') 'Full rate constant at', temp, 'K is ', &
     k_plateau * rate
 end program
